@@ -1,0 +1,22 @@
+{
+  "name": "titleless",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jeremy3333/titleless.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Jeremy3333/titleless/issues"
+  },
+  "homepage": "https://github.com/Jeremy3333/titleless#readme",
+  "dependencies": {
+    "discord.js": "^14.14.1"
+  }
+}
