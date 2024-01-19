@@ -1,5 +1,8 @@
 const { TOKEN } = require("./config.json");
-const { Client, GatewayIntentBits } = require('discord.js');
+const { exec } = require('child_process');
+const path = require('path');
+const { Client, Events, GatewayIntentBits } = require('discord.js');
+const Cerebraly = ".\\bin\\Cerebraly.exe"
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -15,13 +18,22 @@ client.on("ready", async () => {
     console.log(`Watching ${client.guilds.cache.size} servers and ${client.users.cache.size} users`);
 });
 
-client.on("message", async (message) => {
-    console.log(message.content);
-    if (message.author.bot) return;
-    if (message.content.startsWith("!ping")) {
-        message.channel.send("pong!");
-    }
-}
-)
+client.on(Events.MessageCreate, async (message) => {
+    console.log("Received message")
+    exec(`${Cerebraly}`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error executing C++ program: ${error.message}`);
+            return;
+        }
 
-client.login(TOKEN);
+        if (stderr) {
+            console.error(`C++ program returned an error: ${stderr}`);
+            return;
+        }
+
+        // Process the output from the C++ program (stdout)
+        console.log(`C++ program output: ${stdout}`);
+    });
+});
+
+client.login(TOKEN).then(r => console.log("Logged in"));
