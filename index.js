@@ -1,14 +1,17 @@
-const { TOKEN } = require("./config.json");
-const { exec } = require('child_process');
-const path = require('path');
+const { TOKEN, prefix } = require("./config.json");
 const { Client, Events, GatewayIntentBits } = require('discord.js');
-const Cerebraly = ".\\bin\\Cerebraly.exe"
+const fs= require("fs");
+const path = require("path");
+const baseFile = ("commandBase.js");
+const commandBase = require(`./commands/${baseFile}`);
+const commands = { commands: [] };
+
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits["Guilds"],
+        GatewayIntentBits["GuildMessages"],
+        GatewayIntentBits["MessageContent"],
+        GatewayIntentBits["GuildMembers"],
     ],
 });
 
@@ -16,24 +19,35 @@ client.on("ready", async () => {
     console.log("Bot is online and ready to rock! 🚀");
     console.log(`Logged in as ${client.user.tag}`);
     console.log(`Watching ${client.guilds.cache.size} servers and ${client.users.cache.size} users`);
-});
 
-client.on(Events.MessageCreate, async (message) => {
-    console.log("Received message")
-    exec(`${Cerebraly}`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing C++ program: ${error.message}`);
-            return;
+    const readCommands = (dir) => {
+        const files = fs.readdirSync(path.join(__dirname, dir));
+        for (const file of files) {
+            const stat = fs.lstatSync(path.join(__dirname, dir, file));
+            if (stat.isDirectory()) {
+                readCommands(path.join(dir, file));
+            } else if (file !== baseFile) {
+                const option = require(path.join(__dirname, dir, file));
+                commandBase(option);
+                if (typeof option.commands === "string") {
+                    commands.commands.push({
+                        name: option.commands,
+                        value: option.description,
+                    });
+                } else {
+                    commands.commands.push({
+                        name: option.commands[0],
+                        value: option.description,
+                    });
+                }
+            }
         }
-
-        if (stderr) {
-            console.error(`C++ program returned an error: ${stderr}`);
-            return;
-        }
-
-        // Process the output from the C++ program (stdout)
-        console.log(`C++ program output: ${stdout}`);
+    };
+    readCommands("commands");
+    const json = JSON.stringify(commands);
+    fs.writeFile("./json/commands.json", json, function (err) {
+        if (err) return console.log(err);
     });
+    commandBase.listen(client, Events.MessageCreate);
 });
-
-client.login(TOKEN).then(r => console.log("Logged in"));
+client.login(TOKEN).then(r => console.log(`Logged in: ${r}`));
