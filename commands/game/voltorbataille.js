@@ -11,6 +11,7 @@ const grid = {
     border: 8
 }
 
+
 const Voltorbataille = async (message, thread) =>{
     const canvas = Canvas.createCanvas(400, 388);
     const context = canvas.getContext('2d');
@@ -52,6 +53,25 @@ const Voltorbataille = async (message, thread) =>{
         .setFooter(footerOptions)
         .setImage('attachment://background.png')
     await thread.send({ embeds: [embed], files: [attachment]})
+
+    const filter = m => m.author.id === message.author.id
+
+    const collector = thread.createMessageCollector({ filter: filter, time: 3000 });
+
+    collector.on('collect', m => {
+        console.log(`Collected ${m.content}`);
+        if(m.content === "stop"){
+            collector.stop();
+        }
+        else{
+            thread.send("Voltorbataille is not yet implemented... YOU GOURMAND !");
+        }
+    });
+
+    collector.on('end', collected => {
+        console.log(`Collected ${collected.size} items`);
+        thread.send("Voltorbataille stopped");
+    });
 };
 
 module.exports = {
