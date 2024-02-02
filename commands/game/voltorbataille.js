@@ -11,8 +11,7 @@ const grid = {
     border: 8
 }
 
-
-const Voltorbataille = async (message, thread) =>{
+const drawSend = async (message, thread, game) =>{
     const canvas = Canvas.createCanvas(400, 388);
     const context = canvas.getContext('2d');
 
@@ -23,7 +22,7 @@ const Voltorbataille = async (message, thread) =>{
     context.drawImage(background, 0, 0, canvas.width, canvas.height);
     for(let i = 0; i < grid.w; i++){
         for(let j = 0; j < grid.h; j++) {
-            context.drawImage(card, 0, 0, grid.cw, grid.ch, (grid.x + (i * (grid.cw + grid.border))) * 2, (grid.y + (j * (grid.ch + grid.border))) * 2, grid.cw * 2, grid.ch * 2);
+            context.drawImage(card, (game.grid[i][j].index + 1) * (grid.cw + 1), 0, grid.cw, grid.ch, (grid.x + (i * (grid.cw + grid.border))) * 2, (grid.y + (j * (grid.ch + grid.border))) * 2, grid.cw * 2, grid.ch * 2);
         }
     }
 
@@ -53,7 +52,10 @@ const Voltorbataille = async (message, thread) =>{
         .setFooter(footerOptions)
         .setImage('attachment://background.png')
     await thread.send({ embeds: [embed], files: [attachment]})
+}
 
+const Voltorbataille = async (message, thread, game) =>{
+    await drawSend(message, thread, game)
     const filter = m => m.author.id === message.author.id
 
     const collector = thread.createMessageCollector({ filter: filter, time: 3000 });
@@ -74,6 +76,35 @@ const Voltorbataille = async (message, thread) =>{
     });
 };
 
+const init = async (message, thread, level) =>{
+    let date = Date.now();
+    let Y = new Date(date).getFullYear() - 2000;
+    let M = new Date(date).getMonth();
+    let D = new Date(date).getDay();
+    let h = new Date(date).getHours();
+    let m = new Date(date).getMinutes();
+    let s = new Date(date).getSeconds();
+    let game = {
+        grid:[],
+        verticalEnd:[],
+        horizontalEnd:[]
+    };
+
+    for(let i = 0; i < grid.w; i++){
+        game.grid.push([])
+        for (let j = 0; j < grid.h; j++){
+            game.grid[i].push({
+                index: 1,
+                reveled: false
+            })
+        }
+    }
+    //get random number
+    let randomLevelSeed = Math.random(10) + ((level - 1) * 10);
+
+    await Voltorbataille(message, thread, game);
+}
+
 module.exports = {
     commands: "vb",
     description: "Start a game of Voltorbataille",
@@ -90,6 +121,6 @@ module.exports = {
                 reason: 'Voltorbataille need more reason ?',
             });
         }
-        await Voltorbataille(message, thread);
+        await init(message, thread, 1);
     },
 };
