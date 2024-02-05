@@ -1,5 +1,6 @@
 const {  AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const Canvas = require('@napi-rs/canvas');
+const { configs } = require('../../data/levels.json');
 
 const grid = {
     x: 8,
@@ -27,15 +28,19 @@ const drawSend = async (message, thread, game) =>{
     }
 
     for(let i = 0; i < grid.w; i++){
-        context.drawImage(num, 0, 0, 6, 8, ((grid.x + 9) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 0, 0, 6, 8, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 0, 0, 6, 8, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + 13 + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
+        let totalTen = Math.floor(game.verticalEnd[i].total / 10);
+        let totalOne = game.verticalEnd[i].total % 10;
+        context.drawImage(num, 7 * totalTen, 0, 6, 8, ((grid.x + 9) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 7 * totalOne, 0, 6, 8, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 7 * game.verticalEnd[i].numVoltorbs, 0, 6, 8, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + 13 + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
     }
 
     for(let i = 0; i < grid.h; i++){
-        context.drawImage(num, 0, 0, 6, 8, ((grid.x + 9) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 0, 0, 6, 8, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 0, 0, 6, 8, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + 13 + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
+        let totalTen = Math.floor(game.horizontalEnd[i].total / 10);
+        let totalOne = game.horizontalEnd[i].total % 10;
+        context.drawImage(num, 7 * totalTen, 0, 6, 8, ((grid.x + 9) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 7 * totalOne, 0, 6, 8, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 7 * game.horizontalEnd[i].numVoltorbs, 0, 6, 8, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + 13 + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
     }
 
     //const attachment = await new Discord.AttachmentBuilder('./assets/placeholder.jpg' );
@@ -77,13 +82,6 @@ const Voltorbataille = async (message, thread, game) =>{
 };
 
 const init = async (message, thread, level) =>{
-    let date = Date.now();
-    let Y = new Date(date).getFullYear() - 2000;
-    let M = new Date(date).getMonth();
-    let D = new Date(date).getDay();
-    let h = new Date(date).getHours();
-    let m = new Date(date).getMinutes();
-    let s = new Date(date).getSeconds();
     let game = {
         grid:[],
         verticalEnd:[],
@@ -99,8 +97,63 @@ const init = async (message, thread, level) =>{
             })
         }
     }
+    for (let i = 0; i < grid.w; i++){
+        game.verticalEnd.push({
+            numVoltorbs: 0,
+            total: 0
+        });
+    }
+    for (let i = 0; i < grid.h; i++){
+        game.horizontalEnd.push({
+            numVoltorbs: 0,
+            total: 0
+        });
+    }
     //get random number
     let randomLevelSeed = Math.random(10) + ((level - 1) * 10);
+    let levelSpec = configs[Math.floor(randomLevelSeed)];
+    let failCount = 0;
+
+    //set the voltorbs
+    for(let i = 0; i < levelSpec.voltorbs; i++){
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * grid.w);
+            y = Math.floor(Math.random() * grid.h);
+        } while (game.grid[x][y].index !== 1);
+        game.grid[x][y].index = 0;
+    }
+
+    //set the twos
+    for(let i = 0; i < levelSpec.twos; i++){
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * grid.w);
+            y = Math.floor(Math.random() * grid.h);
+        } while (game.grid[x][y].index !== 1);
+        game.grid[x][y].index = 2;
+    }
+
+    //set the threes
+    for(let i = 0; i < levelSpec.threes; i++){
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * grid.w);
+            y = Math.floor(Math.random() * grid.h);
+        } while (game.grid[x][y].index !== 1);
+        game.grid[x][y].index = 3;
+    }
+
+    for(let i = 0; i < grid.w; i++){
+        for(let j = 0; j < grid.h; j++){
+            if(game.grid[i][j].index === 0){
+                game.verticalEnd[i].numVoltorbs++;
+                game.horizontalEnd[j].numVoltorbs++;
+            }
+            game.verticalEnd[i].total += game.grid[i][j].index;
+            game.horizontalEnd[j].total += game.grid[i][j].index;
+        }
+    }
 
     await Voltorbataille(message, thread, game);
 }
