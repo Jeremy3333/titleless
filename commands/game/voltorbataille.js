@@ -55,26 +55,57 @@ const drawSend = async (message, thread, game) =>{
         text: `request by ${message.author.tag}`,
         iconURL: message.author.avatarURL(),
     };
+    let Desc = "";
+
+    if(game.finish){
+        if(game.win){
+            Desc = `You win ! Your score is ${game.score} !`
+        }
+        else{
+            Desc = "You lose ! Your score is 0 !"
+        }
+    }
+    else{
+        Desc = `Score: ${game.score} !`
+    }
 
     const embed = new EmbedBuilder()
         .setTitle("Voltorbataille")
-        .setDescription(`Score: ${game.score}`)
+        .setDescription(Desc)
         .setColor([255, 50, 50])
         .setFooter(footerOptions)
         .setImage('attachment://background.png')
     await thread.send({ embeds: [embed], files: [attachment]})
 }
 
-const revele = (game, x, y) =>{
+const revel = (game, x, y) =>{
     if(game.grid[x][y].reveled){
         return;
     }
     game.grid[x][y].reveled = true;
+    if(game.grid[x][y].index === 0){
+        game.finish = true;
+        game.win = false;
+        game.score = 0;
+        return;
+    }
     if(game.score === 0){
         game.score = game.grid[x][y].index;
     }
     else{
         game.score *= game.grid[x][y].index;
+    }
+    let win = true;
+    for (let i = 0; i < grid.w; i++){
+        for(let j = 0; j < grid.h; j++){
+            if(!game.grid[i][j].reveled && game.grid[i][j].index !== 0 && game.grid[i][j].index !== 1){
+                win = false;
+            }
+        }
+    }
+    if(win){
+        game.finish = true;
+        game.win = true;
     }
 }
 
@@ -82,15 +113,16 @@ const Voltorbataille = async (message, thread, game) =>{
     await drawSend(message, thread, game)
     const filter = m => m.author.id === message.author.id
 
-    const collector = thread.createMessageCollector({ filter: filter, time: 30000 });
+    const collector = thread.createMessageCollector({ filter: filter, time: 60000 });
 
     collector.on('collect', async m => {
         console.log(`Collected ${m.content}`);
-       switch (m.content) {
+        let x = m.content.split(" ");
+       switch (x[0]) {
            case "stop":
                collector.stop();
                break;
-           case "reveal":
+           case "revAll":
                for(let i = 0; i < grid.w; i++){
                    for(let j = 0; j < grid.h; j++){
                        game.grid[i][j].reveled = true;
@@ -100,19 +132,47 @@ const Voltorbataille = async (message, thread, game) =>{
                 collector.resetTimer();
                await drawSend(message, thread, game);
                break;
-           default:
-               let x = parseInt(m.content.split(" ")[0]);
-               let y = parseInt(m.content.split(" ")[1]);
-               if(game.grid[x][y].reveled){
+           case "rev":
+               if(game.grid[x[1]][x[2]].reveled){
                    message.reply("This card is already revealed");
                }
                else{
-                   revele(game, x, y);
+                     revel(game, x[1], x[2]);
                }
                 //reset the timer
                 collector.resetTimer();
+               if(game.finish){
+                   collector.stop();
+               }
                 await drawSend(message, thread, game);
                break;
+           case "row":
+               for (let i = 0; i < grid.w; i++){
+                   if(!game.grid[i][x[1]].reveled){
+                       revel(game, i, x[1]);
+                   }
+                   if(game.finish){
+                       collector.stop();
+                       break;
+                   }
+               }
+               await drawSend(message, thread, game);
+               break;
+           case "col":
+               for (let i = 0; i < grid.h; i++){
+                   if(!game.grid[x[1]][i].reveled){
+                       revel(game, x[1], i);
+                   }
+                   if(game.finish){
+                       collector.stop();
+                       break;
+                   }
+               }
+               await drawSend(message, thread, game);
+               break;
+           default:
+                message.reply("Invalid command");
+                break;
        }
     });
 
@@ -127,7 +187,8 @@ const init = async (message, thread, level) =>{
         grid:[],
         verticalEnd:[],
         horizontalEnd:[],
-        score: 0
+        score: 0,
+        finish: false
     };
 
     // delete everything in the grid, verticalEnd and horizontalEnd
