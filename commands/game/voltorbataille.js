@@ -23,24 +23,29 @@ const drawSend = async (message, thread, game) =>{
     context.drawImage(background, 0, 0, canvas.width, canvas.height);
     for(let i = 0; i < grid.w; i++){
         for(let j = 0; j < grid.h; j++) {
-            context.drawImage(card, (game.grid[i][j].index + 1) * (grid.cw + 1), 0, grid.cw, grid.ch, (grid.x + (i * (grid.cw + grid.border))) * 2, (grid.y + (j * (grid.ch + grid.border))) * 2, grid.cw * 2, grid.ch * 2);
+            if(game.grid[i][j].reveled){
+                context.drawImage(card, (game.grid[i][j].index + 1) * (grid.cw + 1) * 2, 0, grid.cw * 2, grid.ch * 2, (grid.x + (i * (grid.cw + grid.border))) * 2, (grid.y + (j * (grid.ch + grid.border))) * 2, grid.cw * 2, grid.ch * 2);
+            }
+            else{
+                context.drawImage(card, 0, 0, grid.cw * 2, grid.ch * 2, (grid.x + (i * (grid.cw + grid.border))) * 2, (grid.y + (j * (grid.ch + grid.border))) * 2, grid.cw * 2, grid.ch * 2);
+            }
         }
     }
 
     for(let i = 0; i < grid.w; i++){
         let totalTen = Math.floor(game.verticalEnd[i].total / 10);
         let totalOne = game.verticalEnd[i].total % 10;
-        context.drawImage(num, 7 * totalTen, 0, 6, 8, ((grid.x + 9) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 7 * totalOne, 0, 6, 8, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 7 * game.verticalEnd[i].numVoltorbs, 0, 6, 8, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + 13 + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 14 * totalTen, 0, 12, 16, ((grid.x + 9) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 14 * totalOne, 0, 12, 16, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 14 * game.verticalEnd[i].numVoltorbs, 0, 12, 16, ((grid.x + 17) + (i * (grid.cw + grid.border)))*2, (grid.y + 13 + ((grid.h) * (grid.ch + grid.border))) * 2, 12, 16)
     }
 
     for(let i = 0; i < grid.h; i++){
         let totalTen = Math.floor(game.horizontalEnd[i].total / 10);
         let totalOne = game.horizontalEnd[i].total % 10;
-        context.drawImage(num, 7 * totalTen, 0, 6, 8, ((grid.x + 9) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 7 * totalOne, 0, 6, 8, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
-        context.drawImage(num, 7 * game.horizontalEnd[i].numVoltorbs, 0, 6, 8, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + 13 + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 14 * totalTen, 0, 12, 16, ((grid.x + 9) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 14 * totalOne, 0, 12, 16, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
+        context.drawImage(num, 14 * game.horizontalEnd[i].numVoltorbs, 0, 12, 16, ((grid.x + 17) + (grid.w * (grid.cw + grid.border)))*2, (grid.y + 13 + ((i) * (grid.ch + grid.border))) * 2, 12, 16)
     }
 
     //const attachment = await new Discord.AttachmentBuilder('./assets/placeholder.jpg' );
@@ -53,26 +58,62 @@ const drawSend = async (message, thread, game) =>{
 
     const embed = new EmbedBuilder()
         .setTitle("Voltorbataille")
+        .setDescription(`Score: ${game.score}`)
         .setColor([255, 50, 50])
         .setFooter(footerOptions)
         .setImage('attachment://background.png')
     await thread.send({ embeds: [embed], files: [attachment]})
 }
 
+const revele = (game, x, y) =>{
+    if(game.grid[x][y].reveled){
+        return;
+    }
+    game.grid[x][y].reveled = true;
+    if(game.score === 0){
+        game.score = game.grid[x][y].index;
+    }
+    else{
+        game.score *= game.grid[x][y].index;
+    }
+}
+
 const Voltorbataille = async (message, thread, game) =>{
     await drawSend(message, thread, game)
     const filter = m => m.author.id === message.author.id
 
-    const collector = thread.createMessageCollector({ filter: filter, time: 3000 });
+    const collector = thread.createMessageCollector({ filter: filter, time: 30000 });
 
-    collector.on('collect', m => {
+    collector.on('collect', async m => {
         console.log(`Collected ${m.content}`);
-        if(m.content === "stop"){
-            collector.stop();
-        }
-        else{
-            thread.send("Voltorbataille is not yet implemented... YOU GOURMAND !");
-        }
+       switch (m.content) {
+           case "stop":
+               collector.stop();
+               break;
+           case "reveal":
+               for(let i = 0; i < grid.w; i++){
+                   for(let j = 0; j < grid.h; j++){
+                       game.grid[i][j].reveled = true;
+                   }
+               }
+               //reset the timer
+                collector.resetTimer();
+               await drawSend(message, thread, game);
+               break;
+           default:
+               let x = parseInt(m.content.split(" ")[0]);
+               let y = parseInt(m.content.split(" ")[1]);
+               if(game.grid[x][y].reveled){
+                   message.reply("This card is already revealed");
+               }
+               else{
+                   revele(game, x, y);
+               }
+                //reset the timer
+                collector.resetTimer();
+                await drawSend(message, thread, game);
+               break;
+       }
     });
 
     collector.on('end', collected => {
@@ -85,8 +126,14 @@ const init = async (message, thread, level) =>{
     let game = {
         grid:[],
         verticalEnd:[],
-        horizontalEnd:[]
+        horizontalEnd:[],
+        score: 0
     };
+
+    // delete everything in the grid, verticalEnd and horizontalEnd
+    game.grid = [];
+    game.verticalEnd = [];
+    game.horizontalEnd = [];
 
     for(let i = 0; i < grid.w; i++){
         game.grid.push([])
@@ -112,7 +159,6 @@ const init = async (message, thread, level) =>{
     //get random number
     let randomLevelSeed = Math.random(10) + ((level - 1) * 10);
     let levelSpec = configs[Math.floor(randomLevelSeed)];
-    let failCount = 0;
 
     //set the voltorbs
     for(let i = 0; i < levelSpec.voltorbs; i++){
@@ -154,7 +200,6 @@ const init = async (message, thread, level) =>{
             game.horizontalEnd[j].total += game.grid[i][j].index;
         }
     }
-
     await Voltorbataille(message, thread, game);
 }
 
